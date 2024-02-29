@@ -139,7 +139,7 @@ public class ProductController {
             String confirm = validateString(scanner, "Are you sure you want to delete?(Y/N):");
             if(confirm.equalsIgnoreCase("Y") || confirm.equalsIgnoreCase("YES")){
                 productService.delete(code);
-                System.out.printf("Product's with %s has been deleted...!",code);
+                System.out.printf("Product's with %s has been deleted...!\n",code);
             }else {
                 System.out.println("You're canceled delete!");
             }
