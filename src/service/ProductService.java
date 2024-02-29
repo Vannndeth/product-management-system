@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.List;
 
 public interface ProductService {
+    public void start();
     public void random(Long count);
     public List<Product> display();
     public Product read(String code);
@@ -16,5 +17,6 @@ public interface ProductService {
     public void commit();
     public void backup();
     public void restore();
+    public void exit();
 
 }

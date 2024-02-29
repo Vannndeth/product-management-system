@@ -4,6 +4,7 @@ import model.Product;
 import service.ProductService;
 import util.PaginationUtil;
 import util.Singleton;
+import validation.InputValidation;
 import view.ProductView;
 
 import java.util.List;
@@ -19,10 +20,19 @@ public class ProductController {
         scanner = Singleton.getScanner();
         paginationUtil = Singleton.getPaginationUtil();
     }
+
+    public void startProgram(){
+        productService.start();
+    }
     public void random(){
         System.out.print("Enter Number of Records: ");
         Long count = Long.parseLong(scanner.nextLine());
-        productService.random(count);
+        String confirm = InputValidation.validateString(scanner, "Are you sure to random "+count+" product?(Y/N): ");
+        if(confirm.equalsIgnoreCase("YES") || confirm.equalsIgnoreCase("Y")){
+            productService.random(count);
+        }else {
+            System.out.println("You're canceled random!");
+        }
     }
     public void display(){
         int rowPerPage = 10;
@@ -86,7 +96,7 @@ public class ProductController {
         if (product != null) {
             System.out.printf("# Product detail of %s\n", productCode);
             productView.read(productService.read(productCode));
-            System.out.println("Select option to update:");
+            System.out.println("# Select option to update:");
             System.out.println("1. Update All");
             System.out.println("2. Update name");
             System.out.println("3. Update price");
@@ -101,7 +111,6 @@ public class ProductController {
                 case 2 -> {
                     productService.update(productCode, true, false, false);
                 }
-
                 case 3 -> {
                     productService.update(productCode, false, true, false);
                 }
@@ -117,20 +126,27 @@ public class ProductController {
                 }
             }
         } else {
-            System.out.println("Product with code " + product + " not found.");
+            System.out.println("Product with code " + productCode + " not found!");
         }
     }
-
     public void delete(){
         System.out.print("Enter product's code to delete: ");
         String code = String.valueOf(scanner.nextLine());
-        System.out.print("Are you sure you want to delete?(Y/N):");
-        String confirm = String.valueOf(scanner.nextLine());
-        if(confirm.equalsIgnoreCase("Y") || confirm.equalsIgnoreCase("YES")){
-            productService.delete(code);
+        Product product = productService.read(code);
+        if(product != null){
+            System.out.printf("# Product detail of %s\n", code);
+            productView.read(productService.read(code));
+            System.out.print("Are you sure you want to delete?(Y/N):");
+            String confirm = String.valueOf(scanner.nextLine());
+            if(confirm.equalsIgnoreCase("Y") || confirm.equalsIgnoreCase("YES")){
+                productService.delete(code);
+            }else {
+                System.out.println("You're canceled delete!");
+            }
         }else {
-            System.out.println("You're canceled delete!");
+            System.out.printf("Product with code %s not found!\n",code);
         }
+
     }
     public void search(){
         int rowPerPage = 10;
@@ -192,6 +208,6 @@ public class ProductController {
         productView.helpView();
     }
     public void exit(){
-        System.exit(0);
+        productService.exit();
     }
 }

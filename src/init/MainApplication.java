@@ -3,27 +3,33 @@ package init;
 import controller.ProductController;
 import service.ProductService;
 import util.Singleton;
+import validation.InputValidation;
 import view.ProductView;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Scanner;
+
+import static validation.InputValidation.validateString;
 
 public class MainApplication {
     private final ProductView productView;
     private final ProductController productController;
     private final ProductService productService;
+    private final Scanner scanner;
     public MainApplication(){
         productController = Singleton.getProductController();
         productView = Singleton.getProductView();
         productService = Singleton.getProductService();
+        scanner = Singleton.getScanner();
     }
     public void initialize(){
-        Scanner scanner = new Scanner(System.in);
+        productController.startProgram();
         do {
             productView.menu();
-            System.out.print("Please choose option: ");
-            String option = String.valueOf(scanner.nextLine());
+            String option = validateString(scanner, "Please choose option: ");
             switch (option.toLowerCase()){
                 case "l" -> {
                     productController.display();

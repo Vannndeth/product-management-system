@@ -2,6 +2,7 @@ package service;
 
 import model.Product;
 import util.Singleton;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -10,6 +11,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static validation.InputValidation.*;
+
 public class ProductServiceImpl implements ProductService{
     private final Scanner scanner;
     public ProductServiceImpl(){
@@ -21,12 +27,17 @@ public class ProductServiceImpl implements ProductService{
     private static final String BACKUP_EXTENSION = ".bak";
     private final String DATABASE = "src/database/database.bak";
     private final String TEMP = "src/transaction/temp.bak";
+
+    @Override
+    public void start() {
+    }
+
     @Override
     public void random(Long count) {
         long startTime = System.currentTimeMillis(); // Record start time
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TRANSACTION, true))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TRANSACTION))) {
             for (int i = 0; i < count; i++) {
-                String productCode = String.format("CSTAD-%08d", (i+1));
+                String productCode = ("CSTAD-00" + (i+1));
                 String productName = "Product::" + (i+1);
                 int quantity = 1000;
                 double unitPrice = 99.9;
@@ -47,7 +58,7 @@ public class ProductServiceImpl implements ProductService{
     public List<Product> display() {
         long startTime = System.currentTimeMillis();
         List<Product> products = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(TRANSACTION))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(DATABASE))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 Product product = parseProduct(line);
@@ -58,8 +69,8 @@ public class ProductServiceImpl implements ProductService{
         } catch (IOException e) {
             System.err.println("Products unavailable in stock!");
         }
-        long endTime = System.currentTimeMillis(); // Record end time
-        double duration = (endTime - startTime) / 1000.0; // Convert to seconds
+        long endTime = System.currentTimeMillis();
+        double duration = (endTime - startTime) / 1000.0;
         System.out.println("Time taken for reading: " + duration + " seconds");
         return products;
     }
@@ -97,7 +108,7 @@ public class ProductServiceImpl implements ProductService{
     }
     @Override
     public Product read(String code) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(TRANSACTION))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(DATABASE))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 Product product = deserializeProduct(line);
@@ -112,7 +123,7 @@ public class ProductServiceImpl implements ProductService{
     }
     @Override
     public Product write(Product product, String confirm) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TRANSACTION, true))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATABASE, true))) {
             if (confirm.equalsIgnoreCase("Y") || confirm.equalsIgnoreCase("YES")) {
                 String productLine = serializeProduct(product);
                 writer.write(productLine);
@@ -128,55 +139,53 @@ public class ProductServiceImpl implements ProductService{
     }
     @Override
     public void update(String productCode, boolean updateName, boolean updatePrice, boolean updateQuantity) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(TRANSACTION));
+        try (BufferedReader reader = new BufferedReader(new FileReader(DATABASE));
              BufferedWriter writer = new BufferedWriter(new FileWriter(TEMP))) {
-
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length >= 1 && parts[0].equals(productCode)) {
                     if (updateName) {
-                        System.out.print("Enter new name: ");
-                        parts[1] = new Scanner(System.in).nextLine();
+                        parts[1] = validateString(scanner, "Enter new name: ");
                     }
                     if (updatePrice) {
-                        System.out.print("Enter new price: ");
-                        parts[3] = String.valueOf(new Scanner(System.in).nextDouble());
+                        parts[3] = String.valueOf(validateInteger(scanner, "Enter new price: "));
                     }
                     if (updateQuantity) {
-                        System.out.print("Enter new quantity: ");
-                        parts[2] = String.valueOf(new Scanner(System.in).nextInt());
+                        parts[2] = String.valueOf(validateDouble(scanner, "Enter new quantity: "));
+                    }
+                    if(confirmUpdate()){
+                        writer.write(String.join(",", parts));
+                        writer.newLine();
+                    }else {
+                        System.out.println("You're canceled updated!");
                     }
                 }
-                writer.write(String.join(",", parts));
-                writer.newLine();
             }
         } catch (IOException e) {
             System.err.println("Error updating product: " + e.getMessage());
             return; // Exit method on error
         }
 
-        File originalFile = new File(TRANSACTION);
+        File originalFile = new File(DATABASE);
         File tempFile = new File(TEMP);
 
         // Delete the original file
         if (!originalFile.delete()) {
             System.err.println("Failed to delete the original file.");
-            return; // Exit method
+            return;
         }
 
-        // Rename the temporary file to the original file name
         if (!tempFile.renameTo(originalFile)) {
             System.err.println("Failed to rename the temporary file.");
-            return; // Exit method
+            return;
         }
 
         System.out.println("Product with code " + productCode + " updated successfully.");
     }
-
     @Override
     public void delete(String code) {
-        File inputFile = new File(TRANSACTION);
+        File inputFile = new File(DATABASE);
         File tempFile = new File(TEMP);
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFile));
              BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
@@ -206,7 +215,7 @@ public class ProductServiceImpl implements ProductService{
     @Override
     public List<Product> search(String name) {
         List<Product> foundProducts = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(TRANSACTION))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(DATABASE))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 Product product = deserializeProduct(line);
@@ -223,28 +232,34 @@ public class ProductServiceImpl implements ProductService{
     @Override
     public void commit() {
         try {
+            // Create the database file if it doesn't exist
             if (Files.notExists(Paths.get(DATABASE))) {
                 Files.createFile(Paths.get(DATABASE));
-            } else {
             }
         } catch (IOException e) {
             System.err.println("Error creating database file: " + e.getMessage());
             return;
         }
+
         try (BufferedReader reader = new BufferedReader(new FileReader(TRANSACTION));
              BufferedWriter writer = new BufferedWriter(new FileWriter(DATABASE, true))) {
+
             String line;
             while ((line = reader.readLine()) != null) {
-                Product product = deserializeProduct(line);
-                if (product != null) {
-                    String serializedProduct = serializeProduct(product);
-                    writer.write(serializedProduct);
-                    writer.newLine();
-                }
+                // Assuming each line in the transaction file represents a serialized product
+                writer.write(line);
+                writer.newLine();
             }
-            System.out.println("Products committed from transaction to database successfully.");
+            System.out.println("Products committed from transaction to database successfully..!");
         } catch (IOException e) {
             System.err.println("Error committing products: " + e.getMessage());
+        }
+
+        // Remove all objects from the transaction file
+        try {
+            Files.deleteIfExists(Paths.get(TRANSACTION));
+        } catch (IOException e) {
+            System.err.println("Error clearing transaction file: " + e.getMessage());
         }
     }
 
@@ -269,7 +284,6 @@ public class ProductServiceImpl implements ProductService{
                 String backupFileName = generateBackupFileName();
                 // Copy database content to the new backup file
                 Files.copy(Paths.get(DATABASE), Paths.get(backupFileName));
-                System.out.println("Database backed up successfully to " + backupFileName + BACKUP_EXTENSION);
             }
         } catch (IOException e) {
             System.err.println("Error backing up database: " + e.getMessage());
@@ -282,7 +296,7 @@ public class ProductServiceImpl implements ProductService{
                 writer.write(line);
                 writer.newLine();
             }
-            System.out.println("Database backed up successfully to " + BACKUP);
+            System.out.println("Database backed up successfully..!");
         } catch (IOException e) {
             System.err.println("Error backing up database: " + e.getMessage());
         }
@@ -294,24 +308,24 @@ public class ProductServiceImpl implements ProductService{
         File[] files = backupFolder.listFiles();
         String[] split;
         if (files != null && files.length > 0) {
-            System.out.println("Choose a file to restore: ");
-            for (int i = files.length-1; i >= 0; i--) {
+            System.out.println("# Restore: ");
+            for (int i = 0; i < files.length; i++) {
                 System.out.println(files[i].getName());
             }
 
-            System.out.print("Your Input:");
+            System.out.print("Choose file to restore: ");
             String userInput = scanner.nextLine();
             while (!userInput.matches("[V-v]([1-9][0-9]{0,2}|1000)") ){
-                for (int i = files.length-1; i >= 0; i--) {
+                for (int i = 0; i < files.length; i++) {
                     System.out.println(files[i].getName());
                 }
+                System.out.print("Choose file to restore: ");
                 userInput=scanner.nextLine();
             }
-            for (int i = files.length - 1; i >= 0; i--) {
+            for (int i = 0; i < files.length; i++) {
                 split = files[i].getName().split("\\.");
-                System.out.println(split[0]);
                 if (userInput.equalsIgnoreCase(split[0])){
-                    System.out.println(split[1] + " " + split[2]);
+//                    System.out.println(split[1] + " " + split[2]);
                     try (BufferedReader reader = new BufferedReader(new FileReader(BACKUP_FOLDER + userInput+"."+split[1]+"."+split[2]));
                          BufferedWriter writer = new BufferedWriter(new FileWriter(DATABASE))) {
 
@@ -327,7 +341,29 @@ public class ProductServiceImpl implements ProductService{
                 }
             }
         }
+    }
+    private boolean confirmUpdate() {
+        System.out.print("Are you sure you want to update? (Y/N): ");
+        String input = scanner.nextLine().trim().toLowerCase();
+        return input.equals("y");
+    }
 
+    @Override
+    public void exit() {
+        if (Files.exists(Paths.get(TRANSACTION))) {
+            String confirm = validateString(scanner, "Do you want to commit before exit?(Y/N): ");
+            if(confirm.equalsIgnoreCase("YES") || confirm.equalsIgnoreCase("Y")){
+                commit();
+                System.out.println("Good bye see ya in my heart...!");
+                System.exit(0);
+            }else {
+                System.out.println("Good bye see ya in my heart...!");
+                System.exit(0);
+            }
+        }else {
+            System.out.println("Good bye see ya in my heart...!");
+            System.exit(0);
+        }
     }
 }
 
