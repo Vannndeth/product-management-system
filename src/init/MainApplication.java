@@ -26,6 +26,7 @@ public class MainApplication {
         scanner = Singleton.getScanner();
     }
     public void initialize(){
+        productView.logo();
         productController.startProgram();
         do {
             productView.menu();

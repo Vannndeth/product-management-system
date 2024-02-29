@@ -9,6 +9,10 @@ import view.ProductView;
 
 import java.util.List;
 import java.util.Scanner;
+
+import static validation.InputValidation.validateInteger;
+import static validation.InputValidation.validateString;
+
 public class ProductController {
     private final Scanner scanner;
     private final ProductView productView;
@@ -22,11 +26,10 @@ public class ProductController {
     }
 
     public void startProgram(){
-        productService.start();
+        productService.start("Loading", 96, 20);
     }
     public void random(){
-        System.out.print("Enter Number of Records: ");
-        Long count = Long.parseLong(scanner.nextLine());
+        Long count = (long) validateInteger(scanner, "Enter Number of Record: ");
         String confirm = InputValidation.validateString(scanner, "Are you sure to random "+count+" product?(Y/N): ");
         if(confirm.equalsIgnoreCase("YES") || confirm.equalsIgnoreCase("Y")){
             productService.random(count);
@@ -41,8 +44,7 @@ public class ProductController {
         productView.displayProduct(products, rowPerPage, currentPage);
         do {
             productView.paginationOption();
-            System.out.print("-> B)ack or Navigate page: ");
-            String option = String.valueOf(scanner.nextLine());
+            String option = validateString(scanner, "-> B)ack or Navigate page: ");
             switch (option.toUpperCase()){
                 case "F" -> {
                     currentPage = paginationUtil.first(products, rowPerPage, currentPage);
@@ -82,7 +84,6 @@ public class ProductController {
         String code = String.valueOf(scanner.nextLine());
         Product product = productService.read(code);
         if (product != null) {
-            System.out.println("Product found:");
             System.out.printf("# Product detail of %s\n", code);
             productView.read(productService.read(code));
         } else {
@@ -102,8 +103,7 @@ public class ProductController {
             System.out.println("3. Update price");
             System.out.println("4. Update quantity");
             System.out.println("5. Back to menu");
-            System.out.print("Enter your choice: ");
-            int choice = Integer.parseInt(scanner.nextLine());
+            int choice = validateInteger(scanner, "Enter your choice: ");
             switch (choice) {
                 case 1 -> {
                     productService.update(productCode, true, true, true);
@@ -136,10 +136,10 @@ public class ProductController {
         if(product != null){
             System.out.printf("# Product detail of %s\n", code);
             productView.read(productService.read(code));
-            System.out.print("Are you sure you want to delete?(Y/N):");
-            String confirm = String.valueOf(scanner.nextLine());
+            String confirm = validateString(scanner, "Are you sure you want to delete?(Y/N):");
             if(confirm.equalsIgnoreCase("Y") || confirm.equalsIgnoreCase("YES")){
                 productService.delete(code);
+                System.out.printf("Product's with %s has been deleted...!",code);
             }else {
                 System.out.println("You're canceled delete!");
             }
@@ -158,8 +158,7 @@ public class ProductController {
             productView.displayProduct(products, rowPerPage, currentPage);
             do {
                 productView.paginationOption();
-                System.out.print("-> B)ack or Navigate page: ");
-                String option = String.valueOf(scanner.nextLine());
+                String option = validateString(scanner, "-> B)ack or Navigate page: ");
                 switch (option.toUpperCase()){
                     case "F" -> {
                         currentPage = paginationUtil.first(products, rowPerPage, currentPage);

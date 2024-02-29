@@ -1,14 +1,19 @@
 package util;
 
 import model.Product;
+import validation.InputValidation;
 import view.ProductView;
 
 import java.util.List;
 import java.util.Scanner;
 
+import static validation.InputValidation.validateInteger;
+
 public class PaginationUtil {
     private final ProductView productView;
+    private final Scanner scanner;
     public PaginationUtil(){
+        scanner = Singleton.getScanner();
         productView = Singleton.getProductView();
     }
     public int first(List<Product> products, int rowPerPage, int currentPage) {
@@ -32,8 +37,7 @@ public class PaginationUtil {
         return currentPage;
     }
     public int goTo(List<Product> products, int rowPerPage, int currentPage, Scanner scanner) {
-        System.out.print("Enter Page: ");
-        currentPage = Integer.parseInt(scanner.next());
+        currentPage = validateInteger(scanner, "Enter page you want to go: ");
         scanner.nextLine();
         productView.displayProduct(products, rowPerPage, currentPage);
         return currentPage;
@@ -63,8 +67,7 @@ public class PaginationUtil {
     }
     public int setRecord(){
         Scanner sc = new Scanner(System.in);
-        System.out.print("Please enter record for display: ");
-        int record = Integer.parseInt(sc.nextLine());
+        int record = validateInteger(scanner, "Please enter record for display: ");
         System.out.printf("    Set page to %d record successfully...!    ",record);
         System.out.println();
         return record;

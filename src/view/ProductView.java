@@ -7,11 +7,14 @@ import org.nocrala.tools.texttablefmt.ShownBorders;
 import org.nocrala.tools.texttablefmt.Table;
 import service.ProductService;
 import util.Singleton;
+import validation.InputValidation;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Scanner;
+
+import static validation.InputValidation.*;
 
 public class ProductView {
     private static Table table;
@@ -20,7 +23,23 @@ public class ProductView {
     public ProductView(){
         productService = Singleton.getProductService();
     }
-
+    public void logo(){
+        System.out.println(
+                "\n" +
+                        " ▄▄▄▄▄▄▄▄▄▄▄                         ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄    ▄ \n" +
+                        "▐░░░░░░░░░░░▌                       ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌  ▐░▌\n" +
+                        " ▀▀▀▀█░█▀▀▀▀                        ▐░█▀▀▀▀▀▀▀▀▀  ▀▀▀▀█░█▀▀▀▀ ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░▌ ▐░▌ \n" +
+                        "     ▐░▌                            ▐░▌               ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░▌▐░▌  \n" +
+                        "     ▐░▌           ▄▄▄▄▄▄▄▄▄▄▄      ▐░█▄▄▄▄▄▄▄▄▄      ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░▌░▌   \n" +
+                        "     ▐░▌          ▐░░░░░░░░░░░▌     ▐░░░░░░░░░░░▌     ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░░▌    \n" +
+                        "     ▐░▌           ▀▀▀▀▀▀▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀█░▌     ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░▌░▌   \n" +
+                        "     ▐░▌                                      ▐░▌     ▐░▌     ▐░▌       ▐░▌▐░▌          ▐░▌▐░▌  \n" +
+                        " ▄▄▄▄█░█▄▄▄▄                         ▄▄▄▄▄▄▄▄▄█░▌     ▐░▌     ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░▌ ▐░▌ \n" +
+                        "▐░░░░░░░░░░░▌                       ▐░░░░░░░░░░░▌     ▐░▌     ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌  ▐░▌\n" +
+                        " ▀▀▀▀▀▀▀▀▀▀▀                         ▀▀▀▀▀▀▀▀▀▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀    ▀ \n" +
+                        "                                                                                                \n"
+        );
+    }
     public void menu(){
         table = new Table(3, BorderStyle.UNICODE_BOX_DOUBLE_BORDER_WIDE, ShownBorders.SURROUND);
         table.addCell("     Disp(l)ay   ");
@@ -111,15 +130,11 @@ public class ProductView {
             productCode = String.format("CSTAD-%06d", i);
             product.setCode(productCode);
         }
-        System.out.print("Enter Product's Name: ");
-        product.setName(scanner.nextLine());
-        System.out.print("Enter Product's Quantity: ");
-        product.setQuantity(Integer.parseInt(scanner.nextLine()));
-        System.out.print("Enter Unit Price: ");
-        product.setUnitPrice(Double.parseDouble(scanner.nextLine()));
+        product.setName(validateString(scanner, "Enter Product's Name: "));
+        product.setQuantity(validateInteger(scanner, "Enter Product's Quantity: "));
+        product.setUnitPrice(validateDouble(scanner, "Enter Unit Price: "));
         product.setImportedDate(LocalDate.now());
-        System.out.print("Are you sure to create a new product?(Y/N):");
-        String confirm = scanner.nextLine();
+        String confirm = validateString(scanner, "Are you sure to create a new product?(Y/N):");
         return confirm;
     }
 }

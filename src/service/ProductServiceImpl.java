@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 import static validation.InputValidation.*;
 
@@ -21,17 +22,36 @@ public class ProductServiceImpl implements ProductService{
     public ProductServiceImpl(){
         scanner = Singleton.getScanner();
     }
-    private final String TRANSACTION = "src/transaction/transaction.bak";
+    private final String TRANSACTION = "src/transaction/transaction.dat";
     private static final String BACKUP_FOLDER= "src/backup/";
     private static final String BACKUP = "backup";
     private static final String BACKUP_EXTENSION = ".bak";
-    private final String DATABASE = "src/database/database.bak";
-    private final String TEMP = "src/transaction/temp.bak";
+    private final String DATABASE = "src/database/database.dat";
+    private final String TEMP = "src/transaction/temp.dat";
 
     @Override
-    public void start() {
-    }
+    public void start(String message, int length, long timeInterval){
+        char incomplete = '░'; // U+2591 Unicode Character
+        char complete = '█'; // U+2588 Unicode Character
+        StringBuilder builder = new StringBuilder();
+        Stream.generate(() -> incomplete).limit(length).forEach(builder::append);
+        System.out.println(message);
+        for(int i = 0; i < length; i++)
+        {
+            builder.replace(i,i+1,String.valueOf(complete));
+            String progressBar = "\r"+builder;
+            System.out.print(progressBar);
+            try
+            {
+                Thread.sleep(timeInterval);
+            }
+            catch (InterruptedException ignored)
+            {
 
+            }
+        }
+        System.out.println();
+    }
     @Override
     public void random(Long count) {
         long startTime = System.currentTimeMillis(); // Record start time
@@ -149,39 +169,36 @@ public class ProductServiceImpl implements ProductService{
                         parts[1] = validateString(scanner, "Enter new name: ");
                     }
                     if (updatePrice) {
-                        parts[3] = String.valueOf(validateInteger(scanner, "Enter new price: "));
+                        parts[3] = String.valueOf(validateDouble(scanner, "Enter new price: "));
                     }
                     if (updateQuantity) {
-                        parts[2] = String.valueOf(validateDouble(scanner, "Enter new quantity: "));
+                        parts[2] = String.valueOf(validateInteger(scanner, "Enter new quantity: "));
                     }
-                    if(confirmUpdate()){
+                    if (confirmUpdate()) {
                         writer.write(String.join(",", parts));
                         writer.newLine();
-                    }else {
-                        System.out.println("You're canceled updated!");
+                        System.out.println("Product with code " + productCode + " updated successfully.");
+                    } else {
+                        System.out.println("Update canceled for product with code " + productCode);
                     }
+                } else {
+                    writer.write(line);
+                    writer.newLine();
                 }
             }
         } catch (IOException e) {
             System.err.println("Error updating product: " + e.getMessage());
-            return; // Exit method on error
         }
 
+        // Rename temporary file to original file
         File originalFile = new File(DATABASE);
         File tempFile = new File(TEMP);
 
-        // Delete the original file
-        if (!originalFile.delete()) {
-            System.err.println("Failed to delete the original file.");
-            return;
+        if (tempFile.renameTo(originalFile)) {
+            System.out.println("Database updated successfully.");
+        } else {
+            System.err.println("Failed to update the database.");
         }
-
-        if (!tempFile.renameTo(originalFile)) {
-            System.err.println("Failed to rename the temporary file.");
-            return;
-        }
-
-        System.out.println("Product with code " + productCode + " updated successfully.");
     }
     @Override
     public void delete(String code) {
@@ -232,7 +249,6 @@ public class ProductServiceImpl implements ProductService{
     @Override
     public void commit() {
         try {
-            // Create the database file if it doesn't exist
             if (Files.notExists(Paths.get(DATABASE))) {
                 Files.createFile(Paths.get(DATABASE));
             }
@@ -246,7 +262,6 @@ public class ProductServiceImpl implements ProductService{
 
             String line;
             while ((line = reader.readLine()) != null) {
-                // Assuming each line in the transaction file represents a serialized product
                 writer.write(line);
                 writer.newLine();
             }
@@ -254,8 +269,6 @@ public class ProductServiceImpl implements ProductService{
         } catch (IOException e) {
             System.err.println("Error committing products: " + e.getMessage());
         }
-
-        // Remove all objects from the transaction file
         try {
             Files.deleteIfExists(Paths.get(TRANSACTION));
         } catch (IOException e) {
@@ -276,35 +289,31 @@ public class ProductServiceImpl implements ProductService{
     @Override
     public void backup() {
         try {
-            // Check if database file exists
             if (Files.notExists(Paths.get(DATABASE))) {
                 Files.createFile(Paths.get(DATABASE));
             } else {
-                // Generate new backup file name with incremented version number
                 String backupFileName = generateBackupFileName();
-                // Copy database content to the new backup file
                 Files.copy(Paths.get(DATABASE), Paths.get(backupFileName));
             }
         } catch (IOException e) {
             System.err.println("Error backing up database: " + e.getMessage());
         }
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATABASE));
-             BufferedWriter writer = new BufferedWriter(new FileWriter(BACKUP))) {
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                writer.write(line);
-                writer.newLine();
-            }
-            System.out.println("Database backed up successfully..!");
-        } catch (IOException e) {
-            System.err.println("Error backing up database: " + e.getMessage());
-        }
+//        try (BufferedReader reader = new BufferedReader(new FileReader(DATABASE));
+//             BufferedWriter writer = new BufferedWriter(new FileWriter(BACKUP))) {
+//
+//            String line;
+//            while ((line = reader.readLine()) != null) {
+//                writer.write(line);
+//                writer.newLine();
+//            }
+//            System.out.println("Database backed up successfully..!");
+//        } catch (IOException e) {
+//            System.err.println("Error backing up database: " + e.getMessage());
+//        }
     }
-
     @Override
     public void restore() {
-        File backupFolder = new File(BACKUP_FOLDER); // Assuming backup folder exists in the current directory
+        File backupFolder = new File(BACKUP_FOLDER);
         File[] files = backupFolder.listFiles();
         String[] split;
         if (files != null && files.length > 0) {
@@ -312,7 +321,6 @@ public class ProductServiceImpl implements ProductService{
             for (int i = 0; i < files.length; i++) {
                 System.out.println(files[i].getName());
             }
-
             System.out.print("Choose file to restore: ");
             String userInput = scanner.nextLine();
             while (!userInput.matches("[V-v]([1-9][0-9]{0,2}|1000)") ){
@@ -340,12 +348,13 @@ public class ProductServiceImpl implements ProductService{
                     }
                 }
             }
+        }else {
+            System.out.println("Unavailable file!");
         }
     }
     private boolean confirmUpdate() {
-        System.out.print("Are you sure you want to update? (Y/N): ");
-        String input = scanner.nextLine().trim().toLowerCase();
-        return input.equals("y");
+        String input = validateString(scanner, "Are you sure you want to update? (Y/N): ");
+        return input.equalsIgnoreCase("Y") || input.equalsIgnoreCase("YES");
     }
 
     @Override
