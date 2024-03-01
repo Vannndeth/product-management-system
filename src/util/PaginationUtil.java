@@ -38,7 +38,6 @@ public class PaginationUtil {
     }
     public int goTo(List<Product> products, int rowPerPage, int currentPage, Scanner scanner) {
         currentPage = validateInteger(scanner, "Enter page you want to go: ");
-        scanner.nextLine();
         productView.displayProduct(products, rowPerPage, currentPage);
         return currentPage;
     }
